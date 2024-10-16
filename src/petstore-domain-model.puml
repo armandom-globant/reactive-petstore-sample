@@ -1,0 +1,86 @@
+@startuml
+
+interface RestfulApiCommand
+
+class PetController {
+    +findAll(limit: int, offset: int, sort: String, direction: String): ResponseEntity<Flux<ResponseBody>>
+    +findById(petId: String): Mono<ResponseEntity<ResponseBody>>
+    +saveResource(requestBody: PetPostRequestBody): Mono<ResponseEntity<ResponseBody>>
+    +replaceResource(petId: String, requestBody: PetPutRequestBody): Mono<ResponseEntity<ResponseBody>>
+    -requestFacade: RequestFacade
+}
+
+class PostCommand {
+    +executeMono(persistenceMediator: PersistenceMediator): Mono<ResponseEntity<ResponseBody>>
+    +executeFlux(persistenceMediator: PersistenceMediator): Flux<ResponseBody>
+    -request: TransactionRequestWrapper
+}
+
+class PutCommand {
+    +executeMono(persistenceMediator: PersistenceMediator): Mono<ResponseEntity<ResponseBody>>
+    +executeFlux(persistenceMediator: PersistenceMediator): Flux<ResponseBody>
+    -request: TransactionRequestWrapper
+}
+
+class GetCommand {
+    +executeMono(persistenceMediator: PersistenceMediator): Mono<ResponseEntity<ResponseBody>>
+    +executeFlux(persistenceMediator: PersistenceMediator): Flux<ResponseBody>
+    -request: TransactionRequestWrapper
+}
+
+class PersistenceMediator {
+    +findAlreadyExistingResource(requestBody: RequestBody): Mono<ResponseBody>
+    +saveResource(requestBody: RequestBody): Mono<ResponseBody>
+    +findResourceById(pathVariables: Map<String, String>): Mono<ResponseBody>
+    +findAllResources(pageable: Pageable): Flux<ResponseBody>
+    -petRepository: PetRepository
+}
+
+class TransactionRequestWrapper {
+    +withRequestBody(requestBody: Object): Builder
+    +withPathVariables(pathVariables: Map<String, String>): Builder
+    +withPageable(pageable: Pageable): Builder
+    +build(): TransactionRequestWrapper
+    -requestBody: RequestBody
+    -pageable: Pageable
+    -pathVariables: Map<String, String>
+    -pathVariables: Map<String, String>
+}
+
+class RequestFacade {
+    +processRequestForMono(command: RestfulApiCommand): Mono<ResponseEntity<ResponseBody>>
+    +processRequestForFlux(command: RestfulApiCommand): ResponseEntity<Flux<ResponseBody>>
+    -persistenceMediator: PersistenceMediator
+}
+
+class RestfulApiInvoker {
+    +executeCommandForMono(): Mono<ResponseEntity<ResponseBody>>
+    +executeCommandForFlux(): Flux<ResponseBody>
+    -command: RestfulApiCommand
+    -persistenceMediator: PersistenceMediator
+}
+
+class PetRepository {
+    +findAll(pageable: Pageable): List<ResponseBody>
+    +findById(pathVariables: Map<String, String>): ResponseBody
+    +save(requestBody: RequestBody): ResponseBody
+    +replace(pathVariables: Map<String, String>, requestBody: RequestBody): ResponseBody
+}
+
+PetController -down- PostCommand
+PetController -down- PutCommand
+PetController -down- GetCommand
+PetController *- RequestFacade
+RequestFacade *-down- PersistenceMediator
+RequestFacade *- RestfulApiInvoker
+PutCommand -down- TransactionRequestWrapper
+PostCommand -down- TransactionRequestWrapper
+GetCommand -down- TransactionRequestWrapper
+
+RestfulApiCommand <|-up.. PostCommand
+RestfulApiCommand <|-up.. PutCommand
+RestfulApiCommand <|-up.. GetCommand
+
+PersistenceMediator *-down- PetRepository
+
+@enduml

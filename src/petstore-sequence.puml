@@ -1,0 +1,93 @@
+@startuml
+
+actor User
+
+User -> PetController: GET /pet?limit=10&offset=10&sort=name&direction=asc
+activate PetController
+PetController -> TransactionRequestWrapper: build()
+activate TransactionRequestWrapper
+TransactionRequestWrapper --> PetController: TransactionRequestWrapper
+deactivate TransactionRequestWrapper
+PetController -> RequestFacade: processRequestForFlux(new GetCommand(request))
+activate RequestFacade
+RequestFacade -> PersistenceMediator: findAllResources(pageable)
+activate PersistenceMediator
+PersistenceMediator -> PetRepository: findAll(pageable)
+activate PetRepository
+PetRepository --> PersistenceMediator: List<ResponseBody>
+deactivate PetRepository
+PersistenceMediator --> RequestFacade: Flux<ResponseBody>
+deactivate PersistenceMediator
+RequestFacade --> PetController: ResponseEntity<Flux<ResponseBody>>
+deactivate RequestFacade
+PetController --> User: ResponseEntity<Flux<ResponseBody>>
+deactivate PetController
+
+User -> PetController: GET /pet/{petId}
+activate PetController
+PetController -> TransactionRequestWrapper: build()
+activate TransactionRequestWrapper
+TransactionRequestWrapper --> PetController: TransactionRequestWrapper
+deactivate TransactionRequestWrapper
+PetController -> RequestFacade: processRequestForMono(new GetCommand(request))
+activate RequestFacade
+RequestFacade -> PersistenceMediator: findResourceById(pathVariables)
+activate PersistenceMediator
+PersistenceMediator -> PetRepository: findById(pathVariables)
+activate PetRepository
+PetRepository --> PersistenceMediator: ResponseBody
+deactivate PetRepository
+PersistenceMediator --> RequestFacade: Mono<ResponseBody>
+deactivate PersistenceMediator
+RequestFacade --> PetController: Mono<ResponseEntity<ResponseBody>>
+deactivate RequestFacade
+PetController --> User: Mono<ResponseEntity<ResponseBody>>
+deactivate PetController
+
+User -> PetController: POST /pet; (mandatory requestBody)
+activate PetController
+PetController -> TransactionRequestWrapper: build()
+activate TransactionRequestWrapper
+TransactionRequestWrapper --> PetController: TransactionRequestWrapper
+deactivate TransactionRequestWrapper
+PetController -> RequestFacade: processRequestForMono(new PostCommand(request))
+activate RequestFacade
+RequestFacade -> PersistenceMediator: saveResource(requestBody)
+activate PersistenceMediator
+PersistenceMediator -> PetRepository: save(requestBody)
+activate PetRepository
+PetRepository --> PersistenceMediator: ResponseBody
+deactivate PetRepository
+PersistenceMediator --> RequestFacade: Mono<ResponseBody>
+deactivate PersistenceMediator
+RequestFacade --> PetController: Mono<ResponseEntity<ResponseBody>>
+deactivate RequestFacade
+PetController --> User: Mono<ResponseEntity<ResponseBody>>
+deactivate PetController
+
+User -> PetController: PUT /pet/{petId}; (mandatory requestBody)
+activate PetController
+PetController -> TransactionRequestWrapper: build()
+activate TransactionRequestWrapper
+TransactionRequestWrapper --> PetController: TransactionRequestWrapper
+deactivate TransactionRequestWrapper
+PetController -> RequestFacade: processRequestForMono(new PutCommand(request))
+activate RequestFacade
+RequestFacade -> PersistenceMediator: findResourceById(pathVariables)
+activate PersistenceMediator
+PersistenceMediator -> PetRepository: findById(pathVariables)
+activate PetRepository
+PetRepository --> PersistenceMediator: ResponseBody
+deactivate PetRepository
+PersistenceMediator -> PetRepository: replace(pathVariables, requestBody)
+activate PetRepository
+PetRepository --> PersistenceMediator: ResponseBody
+deactivate PetRepository
+PersistenceMediator --> RequestFacade: Mono<ResponseBody>
+deactivate PersistenceMediator
+RequestFacade --> PetController: Mono<ResponseEntity<ResponseBody>>
+deactivate RequestFacade
+PetController --> User: Mono<ResponseEntity<ResponseBody>>
+deactivate PetController
+
+@enduml
