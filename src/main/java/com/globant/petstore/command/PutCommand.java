@@ -14,7 +14,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
-import java.util.function.Function;
 
 @RequiredArgsConstructor
 @EqualsAndHashCode
@@ -24,42 +23,34 @@ public class PutCommand implements RestfulApiCommand {
 
     @Override
     public Mono<ResponseEntity<ResponseBody>> executeMono(PersistenceMediator persistenceMediator) {
-        return persistenceMediator
-                .findAlreadyExistingResource(request.getRequestBody())
-
-                // onComplete was produced - this is expecting to end if the resource does not exist
+        return persistenceMediator.findAlreadyExistingResource(request.getRequestBody())
+                // Resource not found
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException("Resource was expected to exist in order to replace it.")))
+                .flatMap(existingResource -> {
 
-                // onNext was produced - then this is validating (filtering out) resources with different version values
-                .filter(existingResource ->
-                        Objects.equals(existingResource.getVersion(), request.getRequestBody().getVersion()))
+                    // Version mismatch
+                    if (!Objects.equals(existingResource.getVersion(), request.getRequestBody().getVersion())) {
+                        return Mono.error(new ResourceConflictException("Request version does not match latest version"));
+                    }
 
-                // onComplete was produced - if previous version check emits the completion signal (that means version check failed and item was filtered out)
-                .switchIfEmpty(
-                        Mono.error(new ResourceConflictException("Request version does not match latest version")))
+                    // Version match
+                    return persistenceMediator
+                            .findResourceWithNameAlreadyTaken(request.getRequestBody())
+                            .filter(resourceInDbWithSameNameAlreadyTaken ->
+                                    !Objects.equals(existingResource.getId(), resourceInDbWithSameNameAlreadyTaken.getId()))
+                            .hasElement()
+                            .flatMap(duplicateExists -> {
 
-                // async transformation
-                .flatMap(existingResourceToRequest ->
-
-                        persistenceMediator.findAlreadyExistingResource(request.getRequestBody())
-                                .filterWhen(resourceInDbWithSameNameAlreadyTaken ->
-                                        Mono.just(
-                                                !Objects.equals(
-                                                        existingResourceToRequest.getId(),
-                                                        resourceInDbWithSameNameAlreadyTaken.getId())))
-                                .doOnNext(duplicatedResource -> {
-                                    throw new ResourceAlreadyExistsException(duplicatedResource.toString());
-                                })
-                                .then(
-                                        Mono.fromCallable(() ->
-                                                persistenceMediator.updateResource(request.getPathVariables(), request.getRequestBody()))
-                                )
-                )
-                .flatMap(Function.identity())
-
+                                // Duplicate resource found
+                                if (duplicateExists) {
+                                    return Mono.error(new ResourceAlreadyExistsException("Duplicate resource found"));
+                                }
+                                // No duplicate resource
+                                return persistenceMediator.updateResource(request.getPathVariables(), request.getRequestBody());
+                            });
+                })
                 .map(ResponseEntity::ok);
     }
-
 
     @Override
     public Flux<ResponseBody> executeFlux(PersistenceMediator persistenceMediator) {

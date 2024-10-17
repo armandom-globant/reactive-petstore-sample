@@ -2,10 +2,10 @@ package com.globant.petstore.mediator;
 
 import com.globant.petstore.mediator.strategies.pet.PetRepository;
 import com.globant.petstore.model.request.RequestBody;
+import com.globant.petstore.pet.model.response.PetResponseBody;
 import com.globant.petstore.response.ResponseBody;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -37,7 +37,12 @@ public class PersistenceMediator {
 
     public Mono<ResponseBody> findAlreadyExistingResource(RequestBody requestBody) {
         // intentionally avoid using requestBody
-        return Mono.empty();
+        return Mono.just(
+                PetResponseBody
+                        .builder()
+                        .withId("1")
+                        .withVersion(1L)
+                        .build());
     }
 
     // set to return no name collision, that means the replacement new name is not taken by any other resource

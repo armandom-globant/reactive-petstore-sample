@@ -1,0 +1,49 @@
+@startuml
+actor User
+participant "PutCommand" as PutCmd
+participant "PersistenceMediator" as PM
+participant "Mono" as Mono
+participant "ResponseEntity" as RespEntity
+participant "ResponseBody" as RespBody
+
+User -> PutCmd: executeMono(PersistenceMediator)
+PutCmd -> PM: findAlreadyExistingResource(request.getRequestBody())
+PM --> PutCmd: onNext(ExistingResource)
+
+alt Resource not found
+    PM --> PutCmd: onComplete()
+    PutCmd -> Mono: onError(ResourceNotFoundException)
+    Mono --> User: onError(ResourceNotFoundException)
+else Resource found
+    PutCmd --> PutCmd: onNext(ExistingResource)
+    alt Version mismatch
+        PutCmd -> PutCmd: check version
+        PutCmd --> Mono: onError(ResourceConflictException)
+        Mono -> User: onError(ResourceConflictException)
+    else Version match
+        PutCmd --> PutCmd: onNext(ExistingResource)
+        note right of PutCmd
+          Business rule: resources names should be unique
+        end note
+        PutCmd -> PM: findResourceWithNameAlreadyTaken(request.getRequestBody())
+        note right of PutCmd
+          This method is used to check if another resource with the same name
+          already exists in the database.
+        end note
+        PM --> PutCmd: onNext(ResourceInDbWithSameName)
+        alt Duplicate resource found
+            PutCmd -> PutCmd: filter out onNext(ResourceInDbWithSameName) if resources id's are not the same
+            PutCmd --> Mono: onError(ResourceAlreadyExistsException)
+            Mono --> User: onError(ResourceAlreadyExistsException)
+        else No duplicate resource
+            PM --> PutCmd: onComplete()
+            PutCmd -> PM: updateResource(request.getPathVariables(), request.getRequestBody())
+            PM --> PutCmd: onNext(UpdatedResource)
+            PutCmd -> RespEntity: ok(UpdatedResource)
+            RespEntity --> PutCmd: ResponseEntity<RespBody>
+            PutCmd --> User: onNext(ResponseEntity<RespBody>)
+            PutCmd --> User: onComplete()
+        end
+    end
+end
+@enduml

@@ -6,7 +6,6 @@ import com.globant.petstore.pet.model.request.PetPutRequestBody;
 import com.globant.petstore.pet.model.response.PetResponseBody;
 import com.globant.petstore.response.ResponseBody;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -67,7 +66,7 @@ public class PetRepository {
                     .withCategories(request.getCategories())
                     .withStatus(request.getStatus())
                     .withTags(request.getTags())
-                    .withVersion(1L)
+                    .withVersion(request.getVersion() + 1)
                     .build();
         }
         throw new ClassCastException("Not the PetPostRequestBody class that was expected");

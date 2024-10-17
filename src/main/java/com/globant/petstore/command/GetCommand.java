@@ -23,7 +23,7 @@ public class GetCommand implements RestfulApiCommand {
         return persistenceMediator
                 .findResourceById(request.getPathVariables())
                 .switchIfEmpty(Mono.error(new ResourceNotFoundException()))
-                // Mono operations are allowed to take control of the Http response code
+                // Mono operations are allowed to take control of the Http response code and body
                 .map(ResponseEntity::ok);
     }
 

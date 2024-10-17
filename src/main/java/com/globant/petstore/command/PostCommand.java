@@ -11,8 +11,6 @@ import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.function.Function;
-
 @EqualsAndHashCode
 @ToString
 @RequiredArgsConstructor
@@ -30,8 +28,6 @@ public class PostCommand implements RestfulApiCommand {
                 .then(Mono.fromCallable(() ->persistenceMediator.saveResource(request.getRequestBody())))
 
                 .flatMap(savedResource -> savedResource)
-
-                //.flatMap(Function.identity())
 
                 .map(ResponseEntity::ok);
     }

@@ -73,7 +73,8 @@ class GetCommandTest {
         StepVerifier
                 .create(result)
                 .expectSubscription()
-                .expectError(ResourceNotFoundException.class);
+                .expectError(ResourceNotFoundException.class)
+                .verify();
 
         verify(persistenceMediatorMock, only()).findAllResources(any(Pageable.class));
     }
@@ -115,17 +116,19 @@ class GetCommandTest {
 
         subject = new GetCommand(request);
 
-        // setup stubs
-        when(persistenceMediatorMock.findResourceById(anyMap()))
+        // setup stubs to return an empty Mono
+        when(persistenceMediatorMock.findResourceById(request.getPathVariables()))
                 .thenReturn(Mono.empty());
 
         final Mono<ResponseEntity<ResponseBody>> result = subject.executeMono(persistenceMediatorMock);
 
-        StepVerifier.create(result)
+        StepVerifier
+                .create(result)
                 .expectSubscription()
-                .expectError(ResourceNotFoundException.class);
+                .expectError(ResourceNotFoundException.class)
+                .verify();
 
-        verify(persistenceMediatorMock, only()).findResourceById(anyMap());
+        verify(persistenceMediatorMock, only()).findResourceById(request.getPathVariables());
     }
 
 }

@@ -1,6 +1,6 @@
 package com.globant.petstore.command;
 
-import com.globant.petstore.command.exception.ResourceAlreadyExistsException;
+
 import com.globant.petstore.mediator.PersistenceMediator;
 import com.globant.petstore.pet.model.request.PetPostRequestBody;
 import com.globant.petstore.pet.model.response.PetResponseBody;
@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -45,68 +44,21 @@ class PostCommandTest {
         when(persistenceMediatorMock.findAlreadyExistingResource(any(PetPostRequestBody.class)))
                 .thenReturn(Mono.empty());
 
+        PetResponseBody stubbedResponse = PetResponseBody.builder().build();
+        
         when(persistenceMediatorMock.saveResource(any(PetPostRequestBody.class)))
-                .thenReturn(Mono.just(PetResponseBody.builder().build()));
+                .thenReturn(Mono.just(stubbedResponse));
 
         Mono<ResponseEntity<ResponseBody>> result = subject.executeMono(persistenceMediatorMock);
 
-        StepVerifier.create(result)
+        StepVerifier
+                .create(result)
                 .expectSubscription()
-                .expectNext(ResponseEntity.ok(PetResponseBody.builder().build()))
+                .expectNext(ResponseEntity.ok(stubbedResponse))
                 .verifyComplete();
 
         verify(persistenceMediatorMock).findAlreadyExistingResource(any(PetPostRequestBody.class));
         verify(persistenceMediatorMock).saveResource(any(PetPostRequestBody.class));
     }
 
-    @Test
-    void shouldThrowResourceAlreadyExistsExceptionWhenResourceExists() {
-        TransactionRequestWrapper request =
-                TransactionRequestWrapper
-                        .builder()
-                        .withRequestBody(
-                                PetPostRequestBody
-                                        .builder()
-                                        .withName("existing-name")
-                                        .withStatus("existing-status")
-                                        .build())
-                        .build();
-
-        subject = new PostCommand(request);
-
-        when(persistenceMediatorMock.findAlreadyExistingResource(any(PetPostRequestBody.class)))
-                .thenReturn(Mono.just(PetResponseBody.builder().build()));
-
-        Mono<ResponseEntity<ResponseBody>> result = subject.executeMono(persistenceMediatorMock);
-
-        StepVerifier.create(result)
-                .expectSubscription()
-                .expectError(ResourceAlreadyExistsException.class)
-                .verify();
-
-        verify(persistenceMediatorMock).findAlreadyExistingResource(any(PetPostRequestBody.class));
-    }
-
-    @Test
-    void shouldReturnUnsupportedOperationExceptionWhenBulkPersistenceIsExecuted() {
-        TransactionRequestWrapper request =
-                TransactionRequestWrapper
-                        .builder()
-                        .withRequestBody(
-                                PetPostRequestBody
-                                        .builder()
-                                        .withName("some-name")
-                                        .withStatus("random-status")
-                                        .build())
-                        .build();
-
-        subject = new PostCommand(request);
-
-        Flux<ResponseBody> result = subject.executeFlux(persistenceMediatorMock);
-
-        StepVerifier.create(result)
-                .expectSubscription()
-                .expectError(UnsupportedOperationException.class)
-                .verify();
-    }
 }

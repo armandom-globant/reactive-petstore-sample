@@ -1,0 +1,27 @@
+@startuml
+actor User
+participant "PostCommand" as PostCmd
+participant "PersistenceMediator" as PM
+participant "Mono" as Mono
+participant "ResponseEntity" as RespEntity
+participant "ResponseBody" as RespBody
+
+User -> PostCmd: executeMono(PersistenceMediator)
+PostCmd -> PM: findAlreadyExistingResource(request.getRequestBody())
+
+
+alt Resource already exists
+    PM --> PostCmd: onNext(ExistingResource)
+    PostCmd -> PostCmd: react to onNext() and throw ResourceAlreadyExistsException
+    PostCmd -> Mono: onError(ResourceAlreadyExistsException)
+    Mono -> User: onError(ResourceAlreadyExistsException)
+else Resource does not exist
+    PM --> PostCmd: onComplete()
+    PostCmd -> PM: saveResource(request.getRequestBody())
+    PM --> PostCmd: onNext(SavedResource)
+    PostCmd -> RespEntity: ok(SavedResource)
+    RespEntity --> PostCmd: ResponseEntity<RespBody>
+    PostCmd --> User: onNext(ResponseEntity<RespBody>)
+    PostCmd --> User: onComplete()
+end
+@enduml
