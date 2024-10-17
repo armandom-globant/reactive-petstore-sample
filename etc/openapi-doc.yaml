@@ -364,6 +364,11 @@ components:
             - available
             - pending
             - sold
+        version:
+          type: integer
+          description: Latest pet resource version
+          format: int32
+          example: 1
       xml:
         name: pet
     ApiResponse:
